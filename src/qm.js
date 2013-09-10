@@ -518,18 +518,33 @@ qm.func.convertLeastPIToAlgebra = function (input, PIArr) {
     value,
     arr = {
         0 : [],
-        1 : []
+        1 : [],
+		2 : []
     };
     while (i--) {
+		vhdl_arr = [];
+		vhdl = "";
         str = "";
         value = PIArr[i].value;
         k = 0;
         while (k < inputLen) {
             str += (value[k] === "1") ? inputArr[k] : (value[k] === "0") ? (inputArr[k] + "*") : "";
+			
+			// Added for VHDL format support. In this loop we will simply store the inputs as-is, unless they are
+			// negated. We will later group them.
+            var vhdl_elem = (value[k] === "1") ? inputArr[k] : (value[k] === "0") ? ("not(" + inputArr[k] + ")") : "";
+			if(vhdl_elem != "")
+				vhdl_arr.push(vhdl_elem);
+			
             k++;
         }
+		
+		// Join the vhdl_arr with ANDs.
+		vhdl = vhdl_arr.join(" and ");
+		
         arr[0].push(str);
         arr[1].push(value);
+		arr[2].push( "(" + vhdl + ")");
     }
     return arr;
 };
@@ -575,9 +590,15 @@ qm.func.foilArray = function () {
 qm.getLeastPrimeImplicants = function (obj, outputType) {
     var types = {
         "booleanAlgebra" : 0,
-        "raw" : 1
+        "raw" : 1,
+		"vhdl" : 2
     };
-    type = (type in types) ? type : "booleanAlgebra";
+    var type = (outputType in types) ? outputType : "booleanAlgebra";
     var index = types[type];
+	
+	// If we are generating VHDL code, we need to join the terms with OR rather than +.
+	if(type == "vhdl")
+		return qm.func.getLeastPI(obj)[index].join(" or ");
+		
     return qm.func.getLeastPI(obj)[index].join(" + ");
 };
